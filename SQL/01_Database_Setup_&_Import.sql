@@ -1,3 +1,5 @@
+--                                      CREATING DATABASE AND TABLES 
+         
 CREATE DATABASE axon_mfg;
 USE axon_mfg;
 
