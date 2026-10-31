@@ -1,8 +1,5 @@
 <div align="center">
 
----
-
-
 ## 📌 Project Overview
 
 This project focuses on analyzing manufacturing operations to evaluate production performance, manufacturing efficiency, product quality, delivery performance, and operational costs.
