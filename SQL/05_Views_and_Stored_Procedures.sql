@@ -201,20 +201,21 @@ WHERE Doc_Num IS NOT NULL
 GROUP BY Delivery_Status;
 
 
-
 -- ============================================================
 -- PART B: STORED PROCEDURES
 -- ============================================================
 
+USE axon_mfg;
 
--- Q9. Create a stored procedure to retrieve production details by department
+
+-- Q9. Retrieve production details by department
 
 DROP PROCEDURE IF EXISTS sp_Get_Production_By_Department;
 
 DELIMITER //
 
 CREATE PROCEDURE sp_Get_Production_By_Department(
-    IN p_dept_id INT
+    IN p_dept_id VARCHAR(5)
 )
 BEGIN
     SELECT
@@ -225,18 +226,23 @@ BEGIN
         SUM(f.Produced_Qty) AS Total_Produced_Qty,
         SUM(f.Rejected_Qty) AS Total_Rejected_Qty,
         SUM(f.Total_Value) AS Total_Manufacturing_Value
+
     FROM fact_Production f
+
     JOIN dim_Department d
         ON f.Dept_ID = d.Dept_ID
+
     WHERE f.Doc_Num IS NOT NULL
       AND f.Dept_ID = p_dept_id
+
     GROUP BY
         d.Dept_ID,
         d.Dept_Name;
+
 END //
 
 
--- Q10. Create a stored procedure to retrieve production details within a date range
+-- Q10. Retrieve production details within a date range
 
 DROP PROCEDURE IF EXISTS sp_Get_Production_By_Date_Range;
 
@@ -245,6 +251,7 @@ CREATE PROCEDURE sp_Get_Production_By_Date_Range(
     IN p_end_date DATE
 )
 BEGIN
+
     SELECT
         f.Doc_Num,
         f.Date_FK,
@@ -256,54 +263,69 @@ BEGIN
         f.Rejected_Qty,
         f.Delivery_Status,
         f.Total_Value
+
     FROM fact_Production f
+
     LEFT JOIN dim_Department d
         ON f.Dept_ID = d.Dept_ID
+
     LEFT JOIN dim_Buyer b
         ON f.Buyer_ID = b.Buyer_ID
+
     WHERE f.Doc_Num IS NOT NULL
       AND f.Date_FK BETWEEN p_start_date AND p_end_date
+
     ORDER BY f.Date_FK;
+
 END //
 
 
--- Q11. Create a stored procedure to retrieve machine-wise quality performance
+-- Q11. Retrieve machine-wise quality performance
 
 DROP PROCEDURE IF EXISTS sp_Get_Quality_By_Machine;
 
 CREATE PROCEDURE sp_Get_Quality_By_Machine(
-    IN p_machine_code VARCHAR(50)
+    IN p_machine_code VARCHAR(10)
 )
 BEGIN
+
     SELECT
         m.Machine_Code,
         m.Machine_Type,
         COUNT(DISTINCT f.Doc_Num) AS Total_Work_Orders,
         SUM(f.Produced_Qty) AS Total_Produced_Qty,
         SUM(f.Rejected_Qty) AS Total_Rejected_Qty,
+
         ROUND(
             SUM(f.Rejected_Qty) /
-            NULLIF(SUM(f.Produced_Qty), 0) * 100, 2
+            NULLIF(SUM(f.Produced_Qty), 0) * 100,
+            2
         ) AS Rejection_Rate_Pct
+
     FROM fact_Production f
+
     JOIN dim_Machine m
         ON f.Machine_Code = m.Machine_Code
+
     WHERE f.Doc_Num IS NOT NULL
       AND f.Machine_Code = p_machine_code
+
     GROUP BY
         m.Machine_Code,
         m.Machine_Type;
+
 END //
 
 
--- Q12. Create a stored procedure to retrieve buyer-wise performance
+-- Q12. Retrieve buyer-wise performance
 
 DROP PROCEDURE IF EXISTS sp_Get_Buyer_Performance;
 
 CREATE PROCEDURE sp_Get_Buyer_Performance(
-    IN p_buyer_id INT
+    IN p_buyer_id VARCHAR(10)
 )
 BEGIN
+
     SELECT
         b.Buyer_ID,
         b.Buyer_Name,
@@ -314,61 +336,60 @@ BEGIN
         SUM(f.Total_Value) AS Total_Manufacturing_Value,
 
         ROUND(
-            SUM(CASE
-                WHEN f.Delivery_Status = 'On Time' THEN 1
-                ELSE 0
-            END) /
-            NULLIF(COUNT(f.Doc_Num), 0) * 100, 2
+            SUM(
+                CASE
+                    WHEN f.Delivery_Status = 'On Time'
+                    THEN 1
+                    ELSE 0
+                END
+            ) /
+            NULLIF(COUNT(f.Doc_Num), 0) * 100,
+            2
         ) AS On_Time_Delivery_Pct
 
     FROM fact_Production f
+
     JOIN dim_Buyer b
         ON f.Buyer_ID = b.Buyer_ID
+
     WHERE f.Doc_Num IS NOT NULL
       AND f.Buyer_ID = p_buyer_id
+
     GROUP BY
         b.Buyer_ID,
         b.Buyer_Name;
+
 END //
 
 DELIMITER ;
 
 
-
 -- ============================================================
--- PART C: TEST VIEWS AND STORED PROCEDURES
+-- PART C: TEST STORED PROCEDURES
 -- ============================================================
 
+-- Q9 Test
+-- Replace with an actual department ID.
 
--- Test all 8 views
-
-SELECT * FROM vw_Production_Summary;
-
-SELECT * FROM vw_Monthly_Production;
-
-SELECT * FROM vw_Quality_Summary;
-
-SELECT * FROM vw_Machine_Performance;
-
-SELECT * FROM vw_Operation_Performance;
-
-SELECT * FROM vw_Buyer_Delivery_Performance;
-
-SELECT * FROM vw_Employee_Quality_Performance;
-
-SELECT * FROM vw_Delivery_Status_Summary;
+CALL sp_Get_Production_By_Department('D01');
 
 
--- Test stored procedures
--- Replace the sample parameter values with IDs/codes from your tables.
-
-CALL sp_Get_Production_By_Department(1);
+-- Q10 Test
+-- Use dates within your dataset's date range.
 
 CALL sp_Get_Production_By_Date_Range(
-    '2025-01-01',
-    '2025-12-31'
+    '2015-01-01',
+    '2015-12-31'
 );
 
-CALL sp_Get_Quality_By_Machine('M001');
 
-CALL sp_Get_Buyer_Performance(1);
+-- Q11 Test
+-- Replace with an actual machine code.
+
+CALL sp_Get_Quality_By_Machine('MC001');
+
+
+-- Q12 Test
+-- Replace with an actual buyer ID.
+
+CALL sp_Get_Buyer_Performance('B01');
